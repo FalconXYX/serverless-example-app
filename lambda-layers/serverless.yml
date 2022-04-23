@@ -1,0 +1,29 @@
+frameworkVersion: '3'
+
+service: tetra-layers
+
+# Unable to reference external variables in provider
+# See https://github.com/serverless/serverless/issues/4814
+# TODO: convert yml config to serverless.js config to address this
+provider:
+  name: aws
+  region: us-east-1
+  stage: ${opt:stage, 'development'}
+  deploymentBucket:
+    name: tetra-deployments
+    serverSideEncryption: AES256
+
+layers:
+  NodeModules:
+    path: node-modules-layer
+    name: ${self:provider.stage}-node-modules
+    compatibleRuntimes:
+      - nodejs14.x
+
+resources:
+  Outputs:
+    NodeModulesLayerExport:
+      Value:
+        Ref: NodeModulesLambdaLayer
+      Export:
+        Name: NodeModulesLambdaLayer-${self:provider.stage}

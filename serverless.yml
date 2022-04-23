@@ -1,0 +1,65 @@
+frameworkVersion: '3'
+
+service: tetra
+
+# NOTE: plugin load order matters
+plugins:
+  - serverless-bundle
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  region: us-east-1
+  stage: ${opt:stage, 'development'}
+  #  vpc: # automatically adds the AWSLambdaVPCAccessExecutionRole policy to the iamRole
+  #    securityGroupIds: ${file(env.yml):${self:provider.stage}.vpc.securityGroupIds}
+  #    subnetIds: ${file(env.yml):${self:provider.stage}.vpc.subnetIds}
+  environment:
+    NODE_ENV: ${self:provider.stage}
+  stackTags:
+    serverless: 'true'
+    environment: ${self:provider.stage}
+  tags:
+    serverless: 'true'
+    environment: ${self:provider.stage}
+
+functions:
+  hello:
+    handler: src/functions/hello.handler
+    layers:
+      - ${file(env.yml):${self:provider.stage}.layers.NodeModulesLayer}
+    events:
+      - http:
+          path: hello
+          method: post
+    environment:
+      TEST_ENVIRONMENT: ${file(env.yml):${self:provider.stage}.environment.TEST_ENVIRONMENT}
+
+  db:
+    handler: src/functions/db.handler
+    layers:
+      - ${file(env.yml):${self:provider.stage}.layers.NodeModulesLayer}
+    events:
+      - http:
+          path: db
+          method: get
+
+custom:
+  bundle:
+    sourcemaps: true # Enable source maps
+    caching: true # Enable Webpack caching
+    concurrency: 5 # Set desired concurrency, defaults to the number of available cores
+    stats: false # Don't print out any Webpack output
+    linting: true # Enable linting as a part of the build process
+    generateStatsFiles: false # Creates stats files that could be used for bundle analyzing, more below
+    esbuild: false # Use esbuild-loader instead of babel or ts for faster builds
+    disableForkTsChecker: false # Disable the ForkTsChecker plugin, more below
+    tsConfig: 'tsconfig.serverless.json' # Path to your 'tsconfig.json', if it's not in the root
+    packager: npm # Specify a packager, 'npm' or 'yarn'. Defaults to 'npm'.
+    forceExclude: # Because it'll be provided through a Lambda Layer
+      - aws-sdk
+      - knex
+      - objection
+      - pg
+      - uuid
